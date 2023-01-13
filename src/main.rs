@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::net::{TcpListener, TcpStream, Shutdown};
 use std::ptr::read;
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::{io::*, thread, prelude::*};
 
@@ -8,38 +9,41 @@ fn handle_client(mut stream: TcpStream) {
     let buf_reader = BufReader::new(&mut stream);
     let http_request/*: Vec<_>*/ = buf_reader.lines().next().unwrap().unwrap();
     
-    let rquest: Vec<&str> = http_request.split(" ").collect();
-    let rq_tp = rquest.get(0);
-    let id = rquest.get(1);
-    let tp = rquest.get(2);
-    let nm = rquest.get(3);
-    print!("{:#?}",rq_tp); print!("{:#?}",id); print!("{:#?}",tp); print!("{:#?}",nm);
+    let rquest: Vec<_> = http_request.split(" ").collect();
+    let rq_tp = rquest[0].to_string();
+    
+    
+    //print!("{:#?}",rq_tp); print!("{:#?}",id); print!("{:#?}",tp); print!("{:#?}",nm);
     
     let obj_name: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
-    let add_obj_name = obj_name.clone();
+    obj_name.lock().unwrap().insert(1.to_string(),"H1312_0024_10010269_T".to_string());
+    obj_name.lock().unwrap().insert(2.to_string(),"DS_H1312_0024_WORKCNTR".to_string());
+    obj_name.lock().unwrap().insert(3.to_string(),"FU_H1312_0024_10010269_P".to_string());
+
+        
+    let put_obj_name = obj_name.clone();
     let dlt_obj_name = obj_name.clone();
+    let get_obj_name = obj_name.clone();
+    
+    fn put_name(gt_pt_dlt_obj_name: &Mutex<HashMap<String, String>>, nm: String){
+        gt_pt_dlt_obj_name.lock().unwrap().insert(4.to_string(), nm);
+    }
 
-    thread::spawn(move || new_name(&add_obj_name));
-    fn new_name(new_name: &Mutex<HashMap<String, String>>){
-        new_name.lock().unwrap().insert(1.to_string(),"H1312_0024_10010269_T".to_string());
-        new_name.lock().unwrap().insert(2.to_string(),"DS_H1312_0024_WORKCNTR".to_string());
-        new_name.lock().unwrap().insert(3.to_string(),"FU_H1312_0024_10010269_P".to_string());
+ 
+    fn dlt_name(gt_pt_dlt_obj_name: &Mutex<HashMap<String, String>>, id: &String){
+        gt_pt_dlt_obj_name.lock().unwrap().remove(id);
+    }
 
+    fn get_name(gt_pt_dlt_obj_name: &Mutex<HashMap<String, String>>, id: &String){
+        //gt_pt_dlt_obj_name.lock().unwrap().remove(id);
         let k = 2.to_string();
-        let binding = new_name.lock().unwrap();
+        let binding = gt_pt_dlt_obj_name.lock().unwrap();
         let data = binding.get(&k);
         println!("{:?}", data);
     }
 
-    thread::spawn(move || dlt_name(&dlt_obj_name));
-    fn dlt_name(dlt_name: &Mutex<HashMap<String, String>>){
-        let a_key = 1.to_string();
-        dlt_name.lock().unwrap().remove(&a_key);
-    }
-   
     let obj_type: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
     let add_obj_type = obj_type.clone();
-
     thread::spawn(move || new_type(&add_obj_type));
     fn new_type(new_type: &Mutex<HashMap<String, String>>){
         new_type.lock().unwrap().insert(1.to_string(),"AP".to_string());
@@ -47,16 +51,31 @@ fn handle_client(mut stream: TcpStream) {
         new_type.lock().unwrap().insert(3.to_string(),"FU".to_string());
     }
 
-
-    match rq_tp {
-        get => {
-            // echo everything!
+    match rq_tp.as_str() {
+        "get" => {
+            let id = rquest[1].to_string();
+            println!("{:#?}",id); 
             println!("Receive get from client");
-            let response = "Sent get to client";
-            stream.write(response.as_bytes()).unwrap();
+        
+            get_name(&get_obj_name, &id);
+            // echo everything!
+            //let response = "Sent get to client";
+            //stream.write(response.as_bytes()).unwrap();
         },
-        put => println!("Receive put"),
-        delete => println!("Receive delete"),
+        "put" => {
+            let tp = rquest.get(2);
+            let nm = rquest[3].to_string();
+            println!("Receive put");
+            thread::spawn(move || put_name(&put_obj_name, nm));
+            //thread::spawn(move || new_name(&add_obj_name, tp));
+            
+        },
+        "delete" => {
+            let id = rquest[1].to_string(); 
+            println!("Receive delete");
+            //thread::spawn(move || dlt_name(&dlt_obj_name, &id));
+            dlt_name(&dlt_obj_name, &id);
+        },
         _ => println!("Receive X3"),
     }
     /*/*.map(|result| result.unwrap())

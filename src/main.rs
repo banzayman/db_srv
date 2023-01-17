@@ -4,6 +4,7 @@ use std::ptr::read;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::{io::*, thread, prelude::*};
+use rand::Rng;
 
 fn handle_client(mut stream: TcpStream) {
     let buf_reader = BufReader::new(&mut stream);
@@ -25,8 +26,8 @@ fn handle_client(mut stream: TcpStream) {
     let dlt_obj_name = obj_name.clone();
     let get_obj_name = obj_name.clone();
     
-    fn put_name(gt_pt_dlt_obj_name: &Mutex<HashMap<String, String>>, nm: String){
-        gt_pt_dlt_obj_name.lock().unwrap().insert(4.to_string(), nm);
+    fn put_name(gt_pt_dlt_obj_name: &Mutex<HashMap<String, String>>, new_id: String, nm: String){
+        gt_pt_dlt_obj_name.lock().unwrap().insert(new_id, nm);
     }
 
  
@@ -34,8 +35,9 @@ fn handle_client(mut stream: TcpStream) {
         gt_pt_dlt_obj_name.lock().unwrap().remove(id);
     }
 
-    fn get_name(gt_pt_dlt_obj_name: &Mutex<HashMap<String, String>>, id: &String){
+    fn get_name(gt_pt_dlt_obj_name: &Mutex<HashMap<String, String>>, id: String){
         //gt_pt_dlt_obj_name.lock().unwrap().remove(id);
+        gt_pt_dlt_obj_name.lock().unwrap().entry(id);
         let k = 2.to_string();
         let binding = gt_pt_dlt_obj_name.lock().unwrap();
         let data = binding.get(&k);
@@ -57,16 +59,18 @@ fn handle_client(mut stream: TcpStream) {
             println!("{:#?}",id); 
             println!("Receive get from client");
         
-            get_name(&get_obj_name, &id);
+            get_name(&get_obj_name, id);
             // echo everything!
             //let response = "Sent get to client";
             //stream.write(response.as_bytes()).unwrap();
         },
         "put" => {
+            //сгенерить рандомный id для новой записи
+            let new_id = rand::thread_rng().gen_range(1..=100).to_string();
+            let nm = rquest[1].to_string();
             let tp = rquest.get(2);
-            let nm = rquest[3].to_string();
             println!("Receive put");
-            thread::spawn(move || put_name(&put_obj_name, nm));
+            put_name(&put_obj_name, new_id, nm);
             //thread::spawn(move || new_name(&add_obj_name, tp));
             
         },
